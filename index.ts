@@ -109,17 +109,16 @@ const getPawnMoves = (state: GameState, position: Position): BaseMove[] => {
 
 const getKingMoves = (state: GameState, position: Position): BaseMove[] => {
   const playingColor = getPlayingColor(state)
-  const { pieces } = state
 
   const moves: BaseMove[] = []
 
   for (const rowDirection of [-1, 0, 1]) {
     for (const columnDirection of [-1, 0, 1]) {
+      if (rowDirection === 0 && columnDirection === 0) continue
       const moveTo = movePosition(position, [rowDirection, columnDirection])
       if (moveTo) {
-        const piece = pieces[moveTo]
-        if (!piece) moves.push({ moveTo })
-        else if (getPieceColor(piece) !== playingColor) moves.push({ moveTo })
+        const piece = state.pieces[moveTo]
+        if (!piece || (getPieceColor(piece) !== playingColor)) moves.push({ moveTo })
       }
     }
   }
@@ -133,7 +132,26 @@ const getKingMoves = (state: GameState, position: Position): BaseMove[] => {
   return moves
 }
 
+const getQueenMoves = (state: GameState, position: Position): BaseMove[] => {
+  const playingColor = getPlayingColor(state)
+  const moves: BaseMove[] = []
 
+  for (const rowDirection of [-1, 0, 1]) {
+    for (const columnDirection of [-1, 0, 1]) {
+      if (rowDirection === 0 && columnDirection === 0) continue
+      for (let moveSize = 1; moveSize <= 7; moveSize++) {
+        const moveTo = movePosition(position, [rowDirection, columnDirection])
+        if (moveTo) {
+          const piece = state.pieces[moveTo]
+          if (!piece || (getPieceColor(piece) !== playingColor)) moves.push({ moveTo })
+          if (piece) break
+        }
+      }
+    }
+  }
+
+  return moves
+}
 
 
 const initialGameState = {
@@ -204,6 +222,7 @@ function getPieceMoves(state: GameState, position: Position): BaseMove[] {
 
   if (type === "pawn") return getPawnMoves(state, position)
   if (type === "king") return getKingMoves(state, position)
+  if (type === "queen") return getQueenMoves(state, position)
 
   return []
 }
@@ -252,19 +271,22 @@ const getKingPosition = (state: GameState): Position => {
 const getIsKingUnderAttack = (state: GameState): boolean => getPositionsUnderAttack(state).includes(getKingPosition(state))
 
 function progressGame(state: GameState, move: Move): GameState {
+  state = structuredClone(state)
   const playingColor = getPlayingColor(state)
   const { position: from, moveTo: to } = move
 
   const possibleMoves = getPieceMoves(state, from)
 
   const baseMove = possibleMoves.find(move => move.moveTo === to)
-  if (!baseMove) throw new Error(`[${from}, ${to}] is not a valid move`)
+  let isKingUnderAttack = false
+  if (baseMove) {
+    const gameMove = { turn: playingColor, move, transform: baseMove.transform }
+    performGameMove(state, gameMove)
+    isKingUnderAttack = getIsKingUnderAttack(state)
+    state.moves.push(gameMove)
+  }
+  if (!baseMove || isKingUnderAttack) throw new Error(`[${from}, ${to}] is not a valid move`)
 
-  const gameMove = { turn: playingColor, move, transform: baseMove.transform }
-  performGameMove(state, gameMove)
-  if (getIsKingUnderAttack(state)) throw new Error(`[${from}, ${to}] is not a valid move`)
-
-  state.moves.push(gameMove)
 
   return state
 }
