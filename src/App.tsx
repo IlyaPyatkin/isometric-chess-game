@@ -79,6 +79,7 @@ function App() {
                     const canBeSelected = piece && color === playingColor;
                     return (
                       <div
+                        style={{ borderColor: "rgba(255, 255, 255, 0.2)" }}
                         className={twMerge(
                           "border",
                           "aspect-square flex-1 flex items-center justify-center relative bg-opacity-50",

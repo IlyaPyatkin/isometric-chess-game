@@ -80,19 +80,25 @@ const getPawnMoves = (state: GameState, position: Position): BaseMove[] => {
   const moves: BaseMove[] = [];
 
   const forwardPosition = movePosition(position, [0, direction]);
+
+  const isPromotionRow =
+    forwardPosition &&
+    parsePosition(forwardPosition).row === (direction === 1 ? 7 : 0);
+  const promoteTo: Exclude<PieceType, "king" | "pawn"> = "queen"; // todo: change this for underpromotion
+  const getPromotionTransform = (position: Position) =>
+    isPromotionRow
+      ? ({
+          position,
+          pieceFrom: `${playingColor}-pawn`,
+          pieceTo: `${playingColor}-${promoteTo}`,
+        } satisfies Replace)
+      : undefined;
+
   if (forwardPosition) {
     if (!pieces[forwardPosition]) {
-      const isPromotionRow =
-        parsePosition(forwardPosition).row === (direction === 1 ? 7 : 0);
       moves.push({
         moveTo: forwardPosition,
-        transform: isPromotionRow
-          ? {
-              position: forwardPosition,
-              pieceFrom: `${playingColor}-pawn`,
-              pieceTo: `${playingColor}-queen`, // todo: change this for underpromotion
-            }
-          : undefined,
+        transform: getPromotionTransform(forwardPosition),
       });
       if (!didPieceMove(state, position)) {
         const doubleForwardPosition = movePosition(position, [
@@ -110,7 +116,10 @@ const getPawnMoves = (state: GameState, position: Position): BaseMove[] => {
   if (diagonalRightPosition) {
     const piece = pieces[diagonalRightPosition];
     if (piece && getPieceColor(piece) !== playingColor)
-      moves.push({ moveTo: diagonalRightPosition });
+      moves.push({
+        moveTo: diagonalRightPosition,
+        transform: getPromotionTransform(diagonalRightPosition),
+      });
     if (!piece) {
       // todo: add en passant
     }
@@ -120,7 +129,10 @@ const getPawnMoves = (state: GameState, position: Position): BaseMove[] => {
   if (diagonalLeftPosition) {
     const piece = pieces[diagonalLeftPosition];
     if (piece && getPieceColor(piece) !== playingColor)
-      moves.push({ moveTo: diagonalLeftPosition });
+      moves.push({
+        moveTo: diagonalLeftPosition,
+        transform: getPromotionTransform(diagonalLeftPosition),
+      });
     if (!piece) {
       // todo: add en passant
     }
