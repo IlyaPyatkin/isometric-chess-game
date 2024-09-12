@@ -1,4 +1,4 @@
-# Isometric chess game
+# Isometric Chess
 
 ### Chess art by Clint Bellanger
 Links:  [OpenGameArt](https://opengameart.org/content/chess-set-for-gbjam),
