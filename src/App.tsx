@@ -10,9 +10,9 @@ import {
   Position,
   progressGame,
   stringifyPosition,
-} from "../chess.ts";
+} from "./chess.ts";
 import { twMerge } from "tailwind-merge";
-
+import boardImage from "./assets/chess_board.png";
 const chessGrid: null[][] = Array(10).fill(Array(10).fill(null));
 
 function App() {
@@ -38,69 +38,77 @@ function App() {
 
   return (
     <>
-      {chessGrid.map((array, row) => {
-        return (
-          <div key={row} className="flex flex-row">
-            {array.map((_, column) => {
-              const header =
-                (column === 0 || column === 9) && row !== 0 && row !== 9
-                  ? 9 - row
-                  : (row === 0 || row === 9) && column !== 0 && column !== 9
-                    ? columnsString[column - 1]
-                    : undefined;
-              const position = stringifyPosition({
-                row: 9 - row - 1,
-                column: column - 1,
-              });
-              const piece = gameState.pieces[position];
-              const { type, color } = (piece && parsePiece(piece)) ?? {};
-              const isDestination =
-                selectedPiece && positions?.includes(position);
-              const canBeSelected = piece && color === playingColor;
-              return (
-                <div
-                  className={twMerge(
-                    "w-20 h-20 bg-red-400 border flex items-center justify-center relative",
-                    canBeSelected && "bg-yellow-500",
-                    (canBeSelected || isDestination) && "cursor-pointer",
-                  )}
-                  key={column}
-                  onClick={() => {
-                    if (isDestination) {
-                      setGameState((state) =>
-                        progressGame(state, {
-                          position: selectedPiece,
-                          moveTo: position,
-                        }),
-                      );
-                    } else {
-                      if (!canBeSelected) return;
-                      setSelectedPiece(position);
-                    }
-                  }}
-                >
-                  <span
+      <img
+        src={boardImage}
+        className="absolute inset-0 w-full max-h-screen object-contain self-center image-rendering-pixelated p-40"
+        alt="Board"
+      />
+      <div className="absolute inset-0 w-full isometric opacity-50">
+        {chessGrid.map((array, row) => {
+          return (
+            <div key={row} className="flex flex-row flex-1">
+              {array.map((_, column) => {
+                const header =
+                  (column === 0 || column === 9) && row !== 0 && row !== 9
+                    ? 9 - row
+                    : (row === 0 || row === 9) && column !== 0 && column !== 9
+                      ? columnsString[column - 1]
+                      : undefined;
+                const position = stringifyPosition({
+                  row: 9 - row - 1,
+                  column: column - 1,
+                });
+                const piece = gameState.pieces[position];
+                const { type, color } = (piece && parsePiece(piece)) ?? {};
+                const isDestination =
+                  selectedPiece && positions?.includes(position);
+                const canBeSelected = piece && color === playingColor;
+                return (
+                  <div
                     className={twMerge(
-                      "font-bold",
-                      header
-                        ? "text-blue-700"
-                        : color === "b"
-                          ? "text-black"
-                          : "text-white",
-                      selectedPiece === position && "bg-blue-700",
+                      // "border",
+                      "aspect-square flex-1 flex items-center justify-center relative",
+                      canBeSelected && "bg-yellow-500",
+                      (canBeSelected || isDestination) && "cursor-pointer",
                     )}
+                    key={column}
+                    onClick={() => {
+                      if (isDestination) {
+                        setGameState((state) =>
+                          progressGame(state, {
+                            position: selectedPiece,
+                            moveTo: position,
+                          }),
+                        );
+                      } else {
+                        if (!canBeSelected) return;
+                        setSelectedPiece(position);
+                      }
+                    }}
                   >
-                    {header || type}
-                  </span>
-                  {selectedPiece && positions?.includes(position) && (
-                    <div className="absolute inset-0 bg-blue-700 opacity-50 cursor-pointer" />
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        );
-      })}
+                    <span
+                      className={twMerge(
+                        "font-bold text-4xl",
+                        header
+                          ? "text-white"
+                          : color === "b"
+                            ? "text-black"
+                            : "text-white",
+                        selectedPiece === position && "bg-blue-700",
+                      )}
+                    >
+                      {header || type}
+                    </span>
+                    {selectedPiece && positions?.includes(position) && (
+                      <div className="absolute inset-0 bg-blue-700 opacity-50 cursor-pointer" />
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          );
+        })}
+      </div>
     </>
   );
 }

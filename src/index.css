@@ -67,6 +67,11 @@ button:focus-visible {
   }
 }
 
+
+.isometric {
+  transform: rotateX(66deg) rotateY(348deg) rotateZ(341deg) scaleX(0.56) scaleY(0.94) translateX(7px) translateY(-290px);
+}
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;

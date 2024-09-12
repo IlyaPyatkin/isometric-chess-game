@@ -285,10 +285,6 @@ function getPieceColor(piece: Piece): PieceColor {
   return parsePiece(piece).color;
 }
 
-function getPieceType(piece: Piece): PieceType {
-  return parsePiece(piece).type;
-}
-
 export function parsePiece(piece: Piece) {
   const [color, type] = piece.split("-");
   return { color, type } as { color: PieceColor; type: PieceType };
