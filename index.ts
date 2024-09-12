@@ -140,7 +140,7 @@ const getQueenMoves = (state: GameState, position: Position): BaseMove[] => {
     for (const columnDirection of [-1, 0, 1]) {
       if (rowDirection === 0 && columnDirection === 0) continue
       for (let moveSize = 1; moveSize <= 7; moveSize++) {
-        const moveTo = movePosition(position, [rowDirection, columnDirection])
+        const moveTo = movePosition(position, [rowDirection * moveSize, columnDirection * moveSize])
         if (moveTo) {
           const piece = state.pieces[moveTo]
           if (!piece || (getPieceColor(piece) !== playingColor)) moves.push({ moveTo })
@@ -153,6 +153,65 @@ const getQueenMoves = (state: GameState, position: Position): BaseMove[] => {
   return moves
 }
 
+const getRookMoves = (state: GameState, position: Position): BaseMove[] => {
+  const playingColor = getPlayingColor(state)
+  const moves: BaseMove[] = []
+
+  for (const rowDirection of [-1, 0, 1]) {
+    for (const columnDirection of [-1, 0, 1]) {
+      if (Math.abs(rowDirection) === Math.abs(columnDirection)) continue
+      for (let moveSize = 1; moveSize <= 7; moveSize++) {
+        const moveTo = movePosition(position, [rowDirection * moveSize, columnDirection * moveSize])
+        if (moveTo) {
+          const piece = state.pieces[moveTo]
+          if (!piece || (getPieceColor(piece) !== playingColor)) moves.push({ moveTo })
+          if (piece) break
+        }
+      }
+    }
+  }
+
+  return moves
+}
+
+const getBishopMoves = (state: GameState, position: Position): BaseMove[] => {
+  const playingColor = getPlayingColor(state)
+  const moves: BaseMove[] = []
+
+  for (const rowDirection of [-1, 1]) {
+    for (const columnDirection of [-1, 1]) {
+      for (let moveSize = 1; moveSize <= 7; moveSize++) {
+        const moveTo = movePosition(position, [rowDirection * moveSize, columnDirection * moveSize])
+        if (moveTo) {
+          const piece = state.pieces[moveTo]
+          if (!piece || (getPieceColor(piece) !== playingColor)) moves.push({ moveTo })
+          if (piece) break
+        }
+      }
+    }
+  }
+
+  return moves
+}
+
+const getKnightMoves = (state: GameState, position: Position): BaseMove[] => {
+  const playingColor = getPlayingColor(state)
+  const moves: BaseMove[] = []
+
+  for (const rowDirection of [-2, -1, 1, 2]) {
+    for (const columnDirection of [-2, -1, 1, 2]) {
+      if (Math.abs(rowDirection) !== Math.abs(columnDirection)) continue
+      const moveTo = movePosition(position, [rowDirection, columnDirection])
+      if (moveTo) {
+        const piece = state.pieces[moveTo]
+        if (!piece || (getPieceColor(piece) !== playingColor)) moves.push({ moveTo })
+        if (piece) break
+      }
+    }
+  }
+
+  return moves
+}
 
 const initialGameState = {
   moves: [],
@@ -223,6 +282,9 @@ function getPieceMoves(state: GameState, position: Position): BaseMove[] {
   if (type === "pawn") return getPawnMoves(state, position)
   if (type === "king") return getKingMoves(state, position)
   if (type === "queen") return getQueenMoves(state, position)
+  if (type === "knight") return getKnightMoves(state, position)
+  if (type === "bishop") return getBishopMoves(state, position)
+  if (type === "rook") return getRookMoves(state, position)
 
   return []
 }
