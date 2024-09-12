@@ -134,6 +134,8 @@ const getKingMoves = (state: GameState, position: Position): BaseMove[] => {
 }
 
 
+
+
 const initialGameState = {
   moves: [],
   pieces: {
@@ -210,7 +212,7 @@ const getPlayingColor = (state: GameState): PieceColor => {
   return state.moves.length ? getOppositeColor(state.moves[state.moves.length - 1].turn) : "w"
 }
 
-function performGameMove(state: GameState, { move, transform }: GameMove): GameState {
+function performGameMove(state: GameState, { move, transform }: GameMove) {
   performMove(state, move)
   if (transform) {
     if ('moveTo' in transform) performMove(state, transform)
@@ -219,8 +221,6 @@ function performGameMove(state: GameState, { move, transform }: GameMove): GameS
       else delete state.pieces[transform.position]
     }
   }
-
-  return state
 }
 
 function performMove(state: GameState, { position: from, moveTo: to }: Move): GameState {
@@ -241,31 +241,30 @@ const getPositionsUnderAttack = (state: GameState): Position[] => {
   return getAllAvailableMovePositions(state, getOppositeColor(getPlayingColor(state)))
 }
 
-const getIsKingUnderAttack = (state: GameState): boolean => {
+const getKingPosition = (state: GameState): Position => {
   const playingColor = getPlayingColor(state)
-  const kingPosition = (Object.entries(state.pieces) as [Position, Piece][]).find(([_, piece]) => {
+  return (Object.entries(state.pieces) as [Position, Piece][]).find(([_, piece]) => {
     const { type, color } = parsePiece(piece)
     return type === "king" && color === playingColor
   })![0]
-  return getPositionsUnderAttack(state).includes(kingPosition)
 }
 
+const getIsKingUnderAttack = (state: GameState): boolean => getPositionsUnderAttack(state).includes(getKingPosition(state))
+
 function progressGame(state: GameState, move: Move): GameState {
+  const playingColor = getPlayingColor(state)
   const { position: from, moveTo: to } = move
 
   const possibleMoves = getPieceMoves(state, from)
-  if (possibleMoves.length) {
-    // todo: go into the future 1 step and check if the king is under attack
-  }
 
   const baseMove = possibleMoves.find(move => move.moveTo === to)
   if (!baseMove) throw new Error(`[${from}, ${to}] is not a valid move`)
-  const { transform } = baseMove
 
-  const gameMove = { turn: getPlayingColor(state), move, transform }
+  const gameMove = { turn: playingColor, move, transform: baseMove.transform }
   performGameMove(state, gameMove)
-  state.moves.push(gameMove)
+  if (getIsKingUnderAttack(state)) throw new Error(`[${from}, ${to}] is not a valid move`)
 
+  state.moves.push(gameMove)
 
   return state
 }
