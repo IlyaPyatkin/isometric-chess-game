@@ -1,35 +1,41 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import { useState } from "react";
+import "./App.css";
+import { initialGameState, parsePiece, stringifyPosition } from "../index.ts";
+
+const chessGrid: null[][] = Array(8).fill(Array(8).fill(null));
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [gameState, setGameState] = useState(initialGameState);
 
   return (
     <>
-      <div>
-        <a href="https://vitejs.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
+      {chessGrid.map((array, row) => {
+        return (
+          <div key={row} className="flex flex-row">
+            {array.map((_, column) => {
+              const piece =
+                gameState.pieces[stringifyPosition({ row, column })];
+              const { type, color } = (piece && parsePiece(piece)) ?? {};
+              return (
+                <div
+                  className="w-20 h-20 bg-red-400 border flex items-center justify-center"
+                  key={column}
+                >
+                  <span
+                    className={
+                      "font-bold " + color === "w" ? "text-white" : "text-black"
+                    }
+                  >
+                    {type}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        );
+      })}
     </>
-  )
+  );
 }
 
-export default App
+export default App;
