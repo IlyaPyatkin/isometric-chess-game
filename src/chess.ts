@@ -6,8 +6,14 @@ type NumeralPosition = { row: number; column: number };
 export type Move = { position: Position; moveTo: Position };
 type RelativeMove = [number, number];
 
-type PieceColor = "w" | "b";
-type PieceType = "pawn" | "rook" | "knight" | "bishop" | "queen" | "king";
+export type PieceColor = "w" | "b";
+export type PieceType =
+  | "pawn"
+  | "rook"
+  | "knight"
+  | "bishop"
+  | "queen"
+  | "king";
 type Piece = `${PieceColor}-${PieceType}`;
 
 type Replace = {
