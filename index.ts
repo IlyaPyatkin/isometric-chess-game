@@ -1,5 +1,3 @@
-
-
 const columnsString = "abcdefgh"
 type Columns = 'a' | 'b' | 'c' | 'd' | 'e' | 'f' | 'g' | 'h'
 type Rows = '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8'
@@ -242,7 +240,6 @@ const getIsKingUnderAttack = (state: GameState): boolean => {
 
 function progressGame(state: GameState, move: Move): GameState {
   const { position: from, moveTo: to } = move
-  const playingColor = getPlayingColor(state)
 
   const possibleMoves = getPieceMoves(state, from)
   if (possibleMoves.length) {
@@ -253,7 +250,7 @@ function progressGame(state: GameState, move: Move): GameState {
   if (!baseMove) throw new Error(`[${from}, ${to}] is not a valid move`)
   const { transform } = baseMove
 
-  state.moves.push({ turn: playingColor, move, transform })
+  state.moves.push({ turn: getPlayingColor(state), move, transform })
 
   performMove(state, move)
   if (transform) {
@@ -263,7 +260,6 @@ function progressGame(state: GameState, move: Move): GameState {
       else delete state.pieces[transform.position]
     }
   }
-
-
+  
   return state
 }
