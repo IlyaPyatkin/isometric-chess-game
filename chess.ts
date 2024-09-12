@@ -88,11 +88,14 @@ const getPawnMoves = (state: GameState, position: Position): BaseMove[] => {
             }
           : undefined,
       });
-    }
-    if (!didPieceMove(state, position)) {
-      const doubleForwardPosition = movePosition(position, [0, direction * 2]);
-      if (doubleForwardPosition && !pieces[doubleForwardPosition]) {
-        moves.push({ moveTo: doubleForwardPosition });
+      if (!didPieceMove(state, position)) {
+        const doubleForwardPosition = movePosition(position, [
+          0,
+          direction * 2,
+        ]);
+        if (doubleForwardPosition && !pieces[doubleForwardPosition]) {
+          moves.push({ moveTo: doubleForwardPosition });
+        }
       }
     }
   }

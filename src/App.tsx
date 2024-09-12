@@ -3,7 +3,6 @@ import "./App.css";
 import {
   columnsString,
   GameState,
-  getAllAvailableMovePositions,
   getPieceMoves,
   getPlayingColor,
   initialGameState,
@@ -55,19 +54,34 @@ function App() {
               });
               const piece = gameState.pieces[position];
               const { type, color } = (piece && parsePiece(piece)) ?? {};
+              const isDestination =
+                selectedPiece && positions?.includes(position);
+              const canBeSelected = piece && color === playingColor;
               return (
                 <div
-                  className="w-20 h-20 bg-red-400 border flex items-center justify-center relative"
+                  className={twMerge(
+                    "w-20 h-20 bg-red-400 border flex items-center justify-center relative",
+                    canBeSelected && "bg-yellow-500",
+                    (canBeSelected || isDestination) && "cursor-pointer",
+                  )}
                   key={column}
+                  onClick={() => {
+                    if (isDestination) {
+                      setGameState((state) =>
+                        progressGame(state, {
+                          position: selectedPiece,
+                          moveTo: position,
+                        }),
+                      );
+                    } else {
+                      if (!canBeSelected) return;
+                      setSelectedPiece(position);
+                    }
+                  }}
                 >
                   <span
-                    onClick={() => {
-                      if (!piece || color !== playingColor) return;
-                      setSelectedPiece(position);
-                    }}
                     className={twMerge(
                       "font-bold",
-                      piece && "cursor-pointer",
                       header
                         ? "text-blue-700"
                         : color === "b"
@@ -79,17 +93,7 @@ function App() {
                     {header || type}
                   </span>
                   {selectedPiece && positions?.includes(position) && (
-                    <div
-                      onClick={() => {
-                        setGameState((state) =>
-                          progressGame(state, {
-                            position: selectedPiece,
-                            moveTo: position,
-                          }),
-                        );
-                      }}
-                      className="absolute inset-0 bg-blue-700 opacity-50 cursor-pointer"
-                    />
+                    <div className="absolute inset-0 bg-blue-700 opacity-50 cursor-pointer" />
                   )}
                 </div>
               );
