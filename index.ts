@@ -210,6 +210,19 @@ const getPlayingColor = (state: GameState): PieceColor => {
   return state.moves.length ? getOppositeColor(state.moves[state.moves.length - 1].turn) : "w"
 }
 
+function performGameMove(state: GameState, { move, transform }: GameMove): GameState {
+  performMove(state, move)
+  if (transform) {
+    if ('moveTo' in transform) performMove(state, transform)
+    else {
+      if (transform.pieceTo) state.pieces[transform.position] = transform.pieceTo
+      else delete state.pieces[transform.position]
+    }
+  }
+
+  return state
+}
+
 function performMove(state: GameState, { position: from, moveTo: to }: Move): GameState {
   state.pieces[to] = state.pieces[from]
   delete state.pieces[from]
@@ -237,7 +250,6 @@ const getIsKingUnderAttack = (state: GameState): boolean => {
   return getPositionsUnderAttack(state).includes(kingPosition)
 }
 
-
 function progressGame(state: GameState, move: Move): GameState {
   const { position: from, moveTo: to } = move
 
@@ -250,16 +262,10 @@ function progressGame(state: GameState, move: Move): GameState {
   if (!baseMove) throw new Error(`[${from}, ${to}] is not a valid move`)
   const { transform } = baseMove
 
-  state.moves.push({ turn: getPlayingColor(state), move, transform })
+  const gameMove = { turn: getPlayingColor(state), move, transform }
+  performGameMove(state, gameMove)
+  state.moves.push(gameMove)
 
-  performMove(state, move)
-  if (transform) {
-    if ('moveTo' in transform) performMove(state, transform)
-    else {
-      if (transform.pieceTo) state.pieces[transform.position] = transform.pieceTo
-      else delete state.pieces[transform.position]
-    }
-  }
-  
+
   return state
 }
