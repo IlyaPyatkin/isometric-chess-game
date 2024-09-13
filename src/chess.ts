@@ -121,35 +121,46 @@ const getPawnMoves = (
     }
   }
 
-  const diagonalRightPosition = movePosition(position, [direction, direction]);
-  if (diagonalRightPosition) {
-    const piece = pieces[diagonalRightPosition];
-    if (!piece || getPieceColor(piece) !== playingColor) {
-      if (piece || showAttackOnlyMoves) {
-        moves.push({
-          moveTo: diagonalRightPosition,
-          transform: getPromotionTransform(diagonalRightPosition),
-        });
+  for (const diagonalDirection of [-1, 1]) {
+    const diagonalPosition = movePosition(position, [
+      diagonalDirection,
+      direction,
+    ]);
+    if (diagonalPosition) {
+      const piece = pieces[diagonalPosition];
+      if (!piece || getPieceColor(piece) !== playingColor) {
+        if (piece || showAttackOnlyMoves) {
+          moves.push({
+            moveTo: diagonalPosition,
+            transform: getPromotionTransform(diagonalPosition),
+          });
+        }
       }
-    }
-    if (!piece) {
-      // todo: add en passant
-    }
-  }
-
-  const diagonalLeftPosition = movePosition(position, [-direction, direction]);
-  if (diagonalLeftPosition) {
-    const piece = pieces[diagonalLeftPosition];
-    if (!piece || getPieceColor(piece) !== playingColor) {
-      if (piece || showAttackOnlyMoves) {
-        moves.push({
-          moveTo: diagonalLeftPosition,
-          transform: getPromotionTransform(diagonalLeftPosition),
-        });
+      if (!piece) {
+        const sidePosition = movePosition(position, [diagonalDirection, 0])!;
+        const sidePiece = pieces[sidePosition];
+        if (sidePiece) {
+          const { type, color } = parsePiece(sidePiece);
+          if (type === "pawn" && color !== playingColor) {
+            const { move: lastMove } = state.moves[state.moves.length - 1];
+            if (
+              lastMove.position ===
+                movePosition(sidePosition, [0, direction * 2]) &&
+              lastMove.moveTo === sidePosition
+            ) {
+              moves.push({
+                isUnderAttack: false,
+                moveTo: diagonalPosition,
+                transform: {
+                  position: sidePosition,
+                  pieceFrom: sidePiece,
+                  pieceTo: undefined,
+                },
+              });
+            }
+          }
+        }
       }
-    }
-    if (!piece) {
-      // todo: add en passant
     }
   }
 
@@ -379,6 +390,11 @@ export const castlingGameState = {
     e8: "b-king",
     h8: "b-rook",
   } as Pieces,
+} satisfies GameState;
+
+export const enPassantGameState = {
+  moves: [{ turn: "w", move: { position: "f4", moveTo: "f5" } }],
+  pieces: { f5: "w-pawn", g7: "b-pawn", e7: "b-pawn" } as Pieces,
 } satisfies GameState;
 
 const getOppositeColor = (color: PieceColor): PieceColor =>

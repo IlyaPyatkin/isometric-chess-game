@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
-  castlingGameState,
   columnsString,
   GameState,
   getPlayingColor,
   getPositionsUnderAttack,
   getValidPieceMoves,
+  initialGameState,
   parsePiece,
   PieceColor,
   PieceType,
@@ -20,7 +20,7 @@ import pieceImage from "./assets/chess_pieces.png";
 const chessGrid: null[][] = Array(10).fill(Array(10).fill(null));
 
 function App() {
-  const [gameState, setGameState] = useState<GameState>(castlingGameState);
+  const [gameState, setGameState] = useState<GameState>(initialGameState);
   const [selectedPiece, setSelectedPiece] = useState<Position>();
   const playingColor = getPlayingColor(gameState);
   const positionsUnderAttack = getPositionsUnderAttack(gameState, playingColor);
@@ -156,13 +156,7 @@ function App() {
             <div
               key={index}
               className="absolute items-center justify-center flex"
-              style={{
-                left: point.x,
-                top: point.y,
-                width: 10,
-                height: 10,
-                // backgroundColor: type && color ? undefined : "red",
-              }}
+              style={{ left: point.x, top: point.y, width: 10, height: 10 }}
             >
               {type && color && <Piece type={type} color={color} />}
             </div>
@@ -222,9 +216,7 @@ const Piece = ({ type, color }: { type: PieceType; color: PieceColor }) => {
         src={pieceImage}
         alt={"Piece"}
         className="object-none w-auto h-auto max-w-none max-h-none"
-        style={{
-          marginLeft: -offset * 11,
-        }}
+        style={{ marginLeft: -offset * 11 }}
       />
     </div>
   );

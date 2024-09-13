@@ -8,9 +8,13 @@ Links:  [OpenGameArt](https://opengameart.org/content/chess-set-for-gbjam),
 
 ## Todo
 - ~~Add castling~~
-- Add en passant
-- Add time travel
+- ~~Add en passant~~
 - Fix pieces rendering
+- Add menu
+- Add game over and restart
+- Add time travel
+- Add preset levels
+- Add preset level creator
 
 ## Credits
 
