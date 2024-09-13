@@ -160,6 +160,7 @@ const getKingMoves = (
   state: GameState,
   position: Position,
   playingColor: PieceColor,
+  positionsUnderAttack: Position[],
 ): BaseMove[] => {
   const moves: BaseMove[] = [];
 
@@ -174,10 +175,11 @@ const getKingMoves = (
       }
     }
   }
-  // todo: add castling
-  // todo add checks: king is not under attack, all squares king passes are not under attack
 
-  if (!didPieceMove(state, position)) {
+  if (
+    !positionsUnderAttack.includes(position) &&
+    !didPieceMove(state, position)
+  ) {
     const parsedPosition = parsePosition(position);
     const { row } = parsedPosition;
     for (const rookColumn of [0, 7]) {
@@ -190,7 +192,11 @@ const getKingMoves = (
           column !== rookColumn;
           column += direction
         ) {
-          if (state.pieces[stringifyPosition({ row, column })]) {
+          const pathSquare = stringifyPosition({ row, column });
+          if (
+            positionsUnderAttack.includes(pathSquare) ||
+            state.pieces[pathSquare]
+          ) {
             obstacleFound = true;
             break;
           }
@@ -382,6 +388,7 @@ const getPieceMoves = (
   state: GameState,
   position: Position,
   playingColor: PieceColor,
+  positionsUnderAttack: Position[],
   showAttackOnlyMoves?: boolean,
 ): BaseMove[] => {
   const piece = state.pieces[position];
@@ -391,7 +398,8 @@ const getPieceMoves = (
 
   if (type === "pawn")
     return getPawnMoves(state, position, playingColor, showAttackOnlyMoves);
-  if (type === "king") return getKingMoves(state, position, playingColor);
+  if (type === "king")
+    return getKingMoves(state, position, playingColor, positionsUnderAttack);
   if (type === "queen") return getQueenMoves(state, position, playingColor);
   if (type === "knight") return getKnightMoves(state, position, playingColor);
   if (type === "bishop") return getBishopMoves(state, position, playingColor);
@@ -426,7 +434,12 @@ export const getValidPieceMoves = (
   position: Position,
   playingColor: PieceColor,
 ) =>
-  getPieceMoves(state, position, playingColor)
+  getPieceMoves(
+    state,
+    position,
+    playingColor,
+    getPositionsUnderAttack(state, playingColor),
+  )
     .filter(({ moveTo, transform }) => {
       const gameMove = {
         turn: playingColor,
@@ -444,18 +457,23 @@ export const getPlayingColor = (state: GameState): PieceColor =>
     ? getOppositeColor(state.moves[state.moves.length - 1].turn)
     : "w";
 
-const getPiecesPositions = (state: GameState, color: PieceColor): Position[] =>
+const getPiecesPositions = (
+  state: GameState,
+  playingColor: PieceColor,
+): Position[] =>
   (Object.keys(state.pieces) as Position[]).filter(
-    (position) => getPieceColor(state.pieces[position]!) === color,
+    (position) => getPieceColor(state.pieces[position]!) === playingColor,
   );
 
 const getAllAvailableMoves = (
   state: GameState,
-  color: PieceColor,
+  playingColor: PieceColor,
   showAttackOnlyMoves: boolean,
 ): BaseMove[] =>
-  getPiecesPositions(state, color).flatMap((position) =>
-    getPieceMoves(state, position, color, showAttackOnlyMoves),
+  getPiecesPositions(state, playingColor).flatMap((position) =>
+    // to fix recursive call, we pass empty array as positionsUnderAttack which should be fine,
+    // because later on we filter out all moves that don't cause squares to be under attack
+    getPieceMoves(state, position, playingColor, [], showAttackOnlyMoves),
   );
 
 export const getPositionsUnderAttack = (
@@ -478,12 +496,12 @@ const getKingPosition = (
 const getIsKingUnderAttack = (
   state: GameState,
   playingColor: PieceColor,
+  positionsUnderAttack?: Position[],
 ): boolean | undefined => {
   const kingPosition = getKingPosition(state, playingColor);
-  return (
-    kingPosition &&
-    getPositionsUnderAttack(state, playingColor).includes(kingPosition)
-  );
+  if (!kingPosition) return;
+  positionsUnderAttack ??= getPositionsUnderAttack(state, playingColor);
+  return positionsUnderAttack.includes(kingPosition);
 };
 
 export const progressGame = (state: GameState, move: Move): GameState => {
@@ -491,7 +509,13 @@ export const progressGame = (state: GameState, move: Move): GameState => {
   const playingColor = getPlayingColor(state);
   const { position: from, moveTo: to } = move;
 
-  const possibleMoves = getPieceMoves(state, from, playingColor);
+  const positionsUnderAttack = getPositionsUnderAttack(state, playingColor);
+  const possibleMoves = getPieceMoves(
+    state,
+    from,
+    playingColor,
+    positionsUnderAttack,
+  );
 
   const baseMove = possibleMoves.find((move) => move.moveTo === to);
   if (baseMove) {
@@ -503,7 +527,10 @@ export const progressGame = (state: GameState, move: Move): GameState => {
     performGameMove(state, gameMove);
     state.moves.push(gameMove);
   }
-  if (!baseMove || getIsKingUnderAttack(state, playingColor))
+  if (
+    !baseMove ||
+    getIsKingUnderAttack(state, playingColor, positionsUnderAttack)
+  )
     throw new Error(`[${from}, ${to}] is not a valid move`);
 
   return state;

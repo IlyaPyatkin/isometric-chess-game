@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
+  castlingGameState,
   columnsString,
   GameState,
   getPlayingColor,
   getPositionsUnderAttack,
   getValidPieceMoves,
-  initialGameState,
   parsePiece,
   PieceColor,
   PieceType,
@@ -20,7 +20,7 @@ import pieceImage from "./assets/chess_pieces.png";
 const chessGrid: null[][] = Array(10).fill(Array(10).fill(null));
 
 function App() {
-  const [gameState, setGameState] = useState<GameState>(initialGameState);
+  const [gameState, setGameState] = useState<GameState>(castlingGameState);
   const [selectedPiece, setSelectedPiece] = useState<Position>();
   const playingColor = getPlayingColor(gameState);
   const positionsUnderAttack = getPositionsUnderAttack(gameState, playingColor);
@@ -75,7 +75,7 @@ function App() {
                     });
                     const piece = gameState.pieces[position];
                     const { color } = (piece && parsePiece(piece)) ?? {};
-                    const isDestination =
+                    const isPossibleMove =
                       selectedPiece && possibleMoves?.includes(position);
                     const canBeSelected = piece && color === playingColor;
                     return (
@@ -83,14 +83,11 @@ function App() {
                         style={{ borderColor: "rgba(255, 255, 255, 0.2)" }}
                         className={twMerge(
                           "border",
-                          "aspect-square flex-1 flex items-center justify-center relative bg-opacity-50",
-                          selectedPiece === position && "bg-red-500",
-                          positionsUnderAttack.includes(position) &&
-                            "bg-purple-700",
+                          "aspect-square flex-1 flex items-center justify-center relative",
                         )}
                         key={column}
                         onClick={() => {
-                          if (isDestination) {
+                          if (isPossibleMove) {
                             setSelectedPiece(undefined);
                             setGameState((state) => {
                               try {
@@ -129,11 +126,17 @@ function App() {
                             })
                           }
                         />
-                        {isDestination && (
-                          <div className="absolute inset-0 bg-blue-700 opacity-50 cursor-pointer" />
+                        {selectedPiece === position && (
+                          <div className="absolute inset-0 opacity-50 bg-red-500" />
+                        )}
+                        {positionsUnderAttack.includes(position) && (
+                          <div className="absolute inset-0 opacity-50 bg-purple-700" />
+                        )}
+                        {isPossibleMove && (
+                          <div className="absolute inset-0 opacity-50 bg-blue-700 cursor-pointer" />
                         )}
                         {canBeSelected && (
-                          <div className="absolute inset-0 bg-yellow-500 opacity-50 cursor-pointer" />
+                          <div className="absolute inset-0 opacity-50 bg-yellow-500 cursor-pointer" />
                         )}
                       </div>
                     );
