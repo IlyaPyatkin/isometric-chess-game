@@ -425,22 +425,22 @@ export const getPositionsUnderAttack = (
 const getKingPosition = (
   state: GameState,
   playingColor: PieceColor,
-): Position => {
-  return (Object.entries(state.pieces) as [Position, Piece][]).find(
-    ([_, piece]) => {
-      const { type, color } = parsePiece(piece);
-      return type === "king" && color === playingColor;
-    },
-  )![0];
-};
+): Position | undefined =>
+  (Object.entries(state.pieces) as [Position, Piece][]).find(([_, piece]) => {
+    const { type, color } = parsePiece(piece);
+    return type === "king" && color === playingColor;
+  })?.[0];
 
 const getIsKingUnderAttack = (
   state: GameState,
   playingColor: PieceColor,
-): boolean =>
-  getPositionsUnderAttack(state, playingColor).includes(
-    getKingPosition(state, playingColor),
+): boolean | undefined => {
+  const kingPosition = getKingPosition(state, playingColor);
+  return (
+    kingPosition &&
+    getPositionsUnderAttack(state, playingColor).includes(kingPosition)
   );
+};
 
 export function progressGame(state: GameState, move: Move): GameState {
   state = structuredClone(state);
