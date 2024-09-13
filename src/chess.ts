@@ -3,7 +3,7 @@ type Columns = "a" | "b" | "c" | "d" | "e" | "f" | "g" | "h";
 type Rows = "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8";
 export type Position = `${Columns}${Rows}`;
 type NumeralPosition = { row: number; column: number };
-export type Move = { position: Position; moveTo: Position };
+type Move = { position: Position; moveTo: Position };
 type RelativeMove = [number, number];
 
 export type PieceColor = "w" | "b";
@@ -28,6 +28,7 @@ type Transform = Move | Replace;
 type BaseMove = {
   moveTo: Position;
   transform?: Transform;
+  isUnderAttack?: boolean;
 };
 type GameMove = {
   turn: PieceColor;
@@ -72,8 +73,12 @@ const movePosition = (
   return stringifyPosition({ column, row }) as Position;
 };
 
-const getPawnMoves = (state: GameState, position: Position): BaseMove[] => {
-  const playingColor = getPlayingColor(state);
+const getPawnMoves = (
+  state: GameState,
+  position: Position,
+  playingColor: PieceColor,
+  showAttackOnlyMoves?: boolean,
+): BaseMove[] => {
   const { pieces } = state;
 
   const direction = playingColor === "w" ? 1 : -1;
@@ -99,6 +104,7 @@ const getPawnMoves = (state: GameState, position: Position): BaseMove[] => {
       moves.push({
         moveTo: forwardPosition,
         transform: getPromotionTransform(forwardPosition),
+        isUnderAttack: false,
       });
       if (!didPieceMove(state, position)) {
         const doubleForwardPosition = movePosition(position, [
@@ -106,7 +112,7 @@ const getPawnMoves = (state: GameState, position: Position): BaseMove[] => {
           direction * 2,
         ]);
         if (doubleForwardPosition && !pieces[doubleForwardPosition]) {
-          moves.push({ moveTo: doubleForwardPosition });
+          moves.push({ moveTo: doubleForwardPosition, isUnderAttack: false });
         }
       }
     }
@@ -115,11 +121,14 @@ const getPawnMoves = (state: GameState, position: Position): BaseMove[] => {
   const diagonalRightPosition = movePosition(position, [direction, direction]);
   if (diagonalRightPosition) {
     const piece = pieces[diagonalRightPosition];
-    if (piece && getPieceColor(piece) !== playingColor)
-      moves.push({
-        moveTo: diagonalRightPosition,
-        transform: getPromotionTransform(diagonalRightPosition),
-      });
+    if (!piece || getPieceColor(piece) !== playingColor) {
+      if (piece || showAttackOnlyMoves) {
+        moves.push({
+          moveTo: diagonalRightPosition,
+          transform: getPromotionTransform(diagonalRightPosition),
+        });
+      }
+    }
     if (!piece) {
       // todo: add en passant
     }
@@ -128,11 +137,14 @@ const getPawnMoves = (state: GameState, position: Position): BaseMove[] => {
   const diagonalLeftPosition = movePosition(position, [-direction, direction]);
   if (diagonalLeftPosition) {
     const piece = pieces[diagonalLeftPosition];
-    if (piece && getPieceColor(piece) !== playingColor)
-      moves.push({
-        moveTo: diagonalLeftPosition,
-        transform: getPromotionTransform(diagonalLeftPosition),
-      });
+    if (!piece || getPieceColor(piece) !== playingColor) {
+      if (piece || showAttackOnlyMoves) {
+        moves.push({
+          moveTo: diagonalLeftPosition,
+          transform: getPromotionTransform(diagonalLeftPosition),
+        });
+      }
+    }
     if (!piece) {
       // todo: add en passant
     }
@@ -141,9 +153,11 @@ const getPawnMoves = (state: GameState, position: Position): BaseMove[] => {
   return moves;
 };
 
-const getKingMoves = (state: GameState, position: Position): BaseMove[] => {
-  const playingColor = getPlayingColor(state);
-
+const getKingMoves = (
+  state: GameState,
+  position: Position,
+  playingColor: PieceColor,
+): BaseMove[] => {
   const moves: BaseMove[] = [];
 
   for (const rowDirection of [-1, 0, 1]) {
@@ -159,16 +173,14 @@ const getKingMoves = (state: GameState, position: Position): BaseMove[] => {
   }
   // todo: add castling
 
-  if (moves.length) {
-    const positionsUnderAttack = getPositionsUnderAttack(state);
-    moves.filter((move) => !positionsUnderAttack.includes(move.moveTo));
-  }
-
   return moves;
 };
 
-const getQueenMoves = (state: GameState, position: Position): BaseMove[] => {
-  const playingColor = getPlayingColor(state);
+const getQueenMoves = (
+  state: GameState,
+  position: Position,
+  playingColor: PieceColor,
+): BaseMove[] => {
   const moves: BaseMove[] = [];
 
   for (const rowDirection of [-1, 0, 1]) {
@@ -192,8 +204,11 @@ const getQueenMoves = (state: GameState, position: Position): BaseMove[] => {
   return moves;
 };
 
-const getRookMoves = (state: GameState, position: Position): BaseMove[] => {
-  const playingColor = getPlayingColor(state);
+const getRookMoves = (
+  state: GameState,
+  position: Position,
+  playingColor: PieceColor,
+): BaseMove[] => {
   const moves: BaseMove[] = [];
 
   for (const rowDirection of [-1, 0, 1]) {
@@ -217,8 +232,11 @@ const getRookMoves = (state: GameState, position: Position): BaseMove[] => {
   return moves;
 };
 
-const getBishopMoves = (state: GameState, position: Position): BaseMove[] => {
-  const playingColor = getPlayingColor(state);
+const getBishopMoves = (
+  state: GameState,
+  position: Position,
+  playingColor: PieceColor,
+): BaseMove[] => {
   const moves: BaseMove[] = [];
 
   for (const rowDirection of [-1, 1]) {
@@ -241,8 +259,11 @@ const getBishopMoves = (state: GameState, position: Position): BaseMove[] => {
   return moves;
 };
 
-const getKnightMoves = (state: GameState, position: Position): BaseMove[] => {
-  const playingColor = getPlayingColor(state);
+const getKnightMoves = (
+  state: GameState,
+  position: Position,
+  playingColor: PieceColor,
+): BaseMove[] => {
   const moves: BaseMove[] = [];
 
   for (const rowDirection of [-2, -1, 1, 2]) {
@@ -308,35 +329,49 @@ export function parsePiece(piece: Piece) {
   return { color, type } as { color: PieceColor; type: PieceType };
 }
 
-function getPiecesPositions(state: GameState, color: PieceColor): Position[] {
-  return (Object.keys(state.pieces) as Position[]).filter(
-    (position) => getPieceColor(state.pieces[position]!) === color,
-  );
-}
-
 function getOppositeColor(color: PieceColor): PieceColor {
   return color === "w" ? "b" : "w";
 }
 
-export function getPieceMoves(
+function getPieceMoves(
   state: GameState,
   position: Position,
+  playingColor: PieceColor,
+  showAttackOnlyMoves?: boolean,
 ): BaseMove[] {
-  const playingColor = getPlayingColor(state);
   const piece = state.pieces[position];
   if (!piece) return [];
   const { type, color } = parsePiece(piece);
   if (playingColor !== color) return [];
 
-  if (type === "pawn") return getPawnMoves(state, position);
-  if (type === "king") return getKingMoves(state, position);
-  if (type === "queen") return getQueenMoves(state, position);
-  if (type === "knight") return getKnightMoves(state, position);
-  if (type === "bishop") return getBishopMoves(state, position);
-  if (type === "rook") return getRookMoves(state, position);
+  if (type === "pawn")
+    return getPawnMoves(state, position, playingColor, showAttackOnlyMoves);
+  if (type === "king") return getKingMoves(state, position, playingColor);
+  if (type === "queen") return getQueenMoves(state, position, playingColor);
+  if (type === "knight") return getKnightMoves(state, position, playingColor);
+  if (type === "bishop") return getBishopMoves(state, position, playingColor);
+  if (type === "rook") return getRookMoves(state, position, playingColor);
 
   return [];
 }
+
+export const getValidPieceMoves = (
+  state: GameState,
+  position: Position,
+  playingColor: PieceColor,
+) =>
+  getPieceMoves(state, position, playingColor)
+    .filter(({ moveTo, transform }) => {
+      const gameMove = {
+        turn: playingColor,
+        move: { position, moveTo },
+        transform,
+      };
+      const stateClone = structuredClone(state);
+      performGameMove(stateClone, gameMove);
+      return !getIsKingUnderAttack(stateClone, playingColor);
+    })
+    .map(({ moveTo }) => moveTo);
 
 export const getPlayingColor = (state: GameState): PieceColor => {
   return state.moves.length
@@ -365,31 +400,32 @@ function performMove(
   return state;
 }
 
+const getPiecesPositions = (state: GameState, color: PieceColor): Position[] =>
+  (Object.keys(state.pieces) as Position[]).filter(
+    (position) => getPieceColor(state.pieces[position]!) === color,
+  );
+
 const getAllAvailableMoves = (
   state: GameState,
   color: PieceColor,
-): BaseMove[] => {
-  return getPiecesPositions(state, color).flatMap((position) =>
-    getPieceMoves(state, position),
+  showAttackOnlyMoves: boolean,
+): BaseMove[] =>
+  getPiecesPositions(state, color).flatMap((position) =>
+    getPieceMoves(state, position, color, showAttackOnlyMoves),
   );
-};
 
-export const getAllAvailableMovePositions = (
+export const getPositionsUnderAttack = (
   state: GameState,
-  color: PieceColor,
-): Position[] => {
-  return getAllAvailableMoves(state, color).map(({ moveTo }) => moveTo);
-};
+  playingColor: PieceColor,
+): Position[] =>
+  getAllAvailableMoves(state, getOppositeColor(playingColor), true)
+    .filter(({ isUnderAttack }) => isUnderAttack !== false)
+    .map(({ moveTo }) => moveTo);
 
-const getPositionsUnderAttack = (state: GameState): Position[] => {
-  return getAllAvailableMovePositions(
-    state,
-    getOppositeColor(getPlayingColor(state)),
-  );
-};
-
-const getKingPosition = (state: GameState): Position => {
-  const playingColor = getPlayingColor(state);
+const getKingPosition = (
+  state: GameState,
+  playingColor: PieceColor,
+): Position => {
   return (Object.entries(state.pieces) as [Position, Piece][]).find(
     ([_, piece]) => {
       const { type, color } = parsePiece(piece);
@@ -398,18 +434,22 @@ const getKingPosition = (state: GameState): Position => {
   )![0];
 };
 
-const getIsKingUnderAttack = (state: GameState): boolean =>
-  getPositionsUnderAttack(state).includes(getKingPosition(state));
+const getIsKingUnderAttack = (
+  state: GameState,
+  playingColor: PieceColor,
+): boolean =>
+  getPositionsUnderAttack(state, playingColor).includes(
+    getKingPosition(state, playingColor),
+  );
 
 export function progressGame(state: GameState, move: Move): GameState {
   state = structuredClone(state);
   const playingColor = getPlayingColor(state);
   const { position: from, moveTo: to } = move;
 
-  const possibleMoves = getPieceMoves(state, from);
+  const possibleMoves = getPieceMoves(state, from, playingColor);
 
   const baseMove = possibleMoves.find((move) => move.moveTo === to);
-  let isKingUnderAttack = false;
   if (baseMove) {
     const gameMove = {
       turn: playingColor,
@@ -417,10 +457,9 @@ export function progressGame(state: GameState, move: Move): GameState {
       transform: baseMove.transform,
     };
     performGameMove(state, gameMove);
-    isKingUnderAttack = getIsKingUnderAttack(state);
     state.moves.push(gameMove);
   }
-  if (!baseMove || isKingUnderAttack)
+  if (!baseMove || getIsKingUnderAttack(state, playingColor))
     throw new Error(`[${from}, ${to}] is not a valid move`);
 
   return state;

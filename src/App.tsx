@@ -3,8 +3,9 @@ import "./App.css";
 import {
   columnsString,
   GameState,
-  getPieceMoves,
   getPlayingColor,
+  getPositionsUnderAttack,
+  getValidPieceMoves,
   initialGameState,
   parsePiece,
   PieceColor,
@@ -16,15 +17,16 @@ import {
 import { twMerge } from "tailwind-merge";
 import boardImage from "./assets/chess_board.png";
 import pieceImage from "./assets/chess_pieces.png";
+
 const chessGrid: null[][] = Array(10).fill(Array(10).fill(null));
 
 function App() {
   const [gameState, setGameState] = useState<GameState>(initialGameState);
   const [selectedPiece, setSelectedPiece] = useState<Position>();
   const playingColor = getPlayingColor(gameState);
-  const positions =
-    selectedPiece &&
-    getPieceMoves(gameState, selectedPiece)?.map(({ moveTo }) => moveTo);
+  const positionsUnderAttack = getPositionsUnderAttack(gameState, playingColor);
+  const possibleMoves =
+    selectedPiece && getValidPieceMoves(gameState, selectedPiece, playingColor);
 
   const onEscPress = useCallback(() => {
     setSelectedPiece(undefined);
@@ -75,7 +77,7 @@ function App() {
                     const piece = gameState.pieces[position];
                     const { color } = (piece && parsePiece(piece)) ?? {};
                     const isDestination =
-                      selectedPiece && positions?.includes(position);
+                      selectedPiece && possibleMoves?.includes(position);
                     const canBeSelected = piece && color === playingColor;
                     return (
                       <div
@@ -83,9 +85,9 @@ function App() {
                         className={twMerge(
                           "border",
                           "aspect-square flex-1 flex items-center justify-center relative bg-opacity-50",
-                          canBeSelected && "bg-yellow-500",
                           selectedPiece === position && "bg-red-500",
-                          (canBeSelected || isDestination) && "cursor-pointer",
+                          positionsUnderAttack.includes(position) &&
+                            "bg-purple-700",
                         )}
                         key={column}
                         onClick={() => {
@@ -98,6 +100,7 @@ function App() {
                                   moveTo: position,
                                 });
                               } catch (e) {
+                                console.error(e);
                                 if (
                                   typeof e === "object" &&
                                   e &&
@@ -113,19 +116,11 @@ function App() {
                           }
                         }}
                       >
-                        <span
-                          className={twMerge(
-                            "font-bold text-3xl absolute",
-                            header
-                              ? "text-white"
-                              : color === "b"
-                                ? "text-black"
-                                : "text-white",
-                            selectedPiece === position && "bg-blue-700",
-                          )}
-                        >
-                          {header}
-                        </span>
+                        {header && (
+                          <span className="font-bold text-3xl absolute text-white">
+                            {header}
+                          </span>
+                        )}
                         <PointCatcher
                           setPoint={(point) =>
                             setPoints((points) => {
@@ -135,8 +130,11 @@ function App() {
                             })
                           }
                         />
-                        {selectedPiece && positions?.includes(position) && (
+                        {isDestination && (
                           <div className="absolute inset-0 bg-blue-700 opacity-50 cursor-pointer" />
+                        )}
+                        {canBeSelected && (
+                          <div className="absolute inset-0 bg-yellow-500 opacity-50 cursor-pointer" />
                         )}
                       </div>
                     );
