@@ -175,6 +175,45 @@ const getKingMoves = (
     }
   }
   // todo: add castling
+  // todo add checks: king is not under attack, all squares king passes are not under attack
+
+  if (!didPieceMove(state, position)) {
+    const parsedPosition = parsePosition(position);
+    const { row } = parsedPosition;
+    for (const rookColumn of [0, 7]) {
+      const direction = rookColumn === 0 ? -1 : 1;
+      const rookPosition = stringifyPosition({ row, column: rookColumn });
+      if (!didPieceMove(state, rookPosition)) {
+        let obstacleFound = false;
+        for (
+          let column = parsedPosition.column + direction;
+          column !== rookColumn;
+          column += direction
+        ) {
+          if (state.pieces[stringifyPosition({ row, column })]) {
+            obstacleFound = true;
+            break;
+          }
+        }
+        if (!obstacleFound) {
+          moves.push({
+            moveTo: stringifyPosition({
+              row,
+              column: parsedPosition.column + 2 * direction,
+            }),
+            isUnderAttack: false,
+            transform: {
+              position: rookPosition,
+              moveTo: stringifyPosition({
+                row,
+                column: parsedPosition.column + direction,
+              }),
+            },
+          });
+        }
+      }
+    }
+  }
 
   return moves;
 };
@@ -320,6 +359,19 @@ export const initialGameState = {
     f7: "b-pawn",
     g7: "b-pawn",
     h7: "b-pawn",
+  } as Pieces,
+} satisfies GameState;
+
+export const castlingGameState = {
+  moves: [],
+  pieces: {
+    a1: "w-rook",
+    e1: "w-king",
+    h1: "w-rook",
+
+    a8: "b-rook",
+    e8: "b-king",
+    h8: "b-rook",
   } as Pieces,
 } satisfies GameState;
 
