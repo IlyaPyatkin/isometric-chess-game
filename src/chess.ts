@@ -3,7 +3,7 @@ type Columns = "a" | "b" | "c" | "d" | "e" | "f" | "g" | "h";
 type Rows = "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8";
 export type Position = `${Columns}${Rows}`;
 type NumeralPosition = { row: number; column: number };
-type Move = { position: Position; moveTo: Position };
+export type Move = { position: Position; moveTo: Position };
 type RelativeMove = [number, number];
 
 export type PieceColor = "w" | "b";
@@ -14,7 +14,7 @@ export type PieceType =
   | "bishop"
   | "queen"
   | "king";
-type Piece = `${PieceColor}-${PieceType}`;
+export type Piece = `${PieceColor}-${PieceType}`;
 
 type Replace = {
   position: Position;
@@ -49,7 +49,7 @@ const didPieceMove = (state: GameState, position: Position): boolean =>
     ({ move }) => move.position === position || move.moveTo === position,
   );
 
-const parsePosition = (position: Position): NumeralPosition => {
+export const parsePosition = (position: Position): NumeralPosition => {
   const [column, row] = position.split("");
   return { column: columnsString.indexOf(column), row: parseInt(row) - 1 };
 };
@@ -481,10 +481,20 @@ const getPiecesPositions = (
     (position) => getPieceColor(state.pieces[position]!) === playingColor,
   );
 
+export const getAllPossibleMoves = (
+  state: GameState,
+  playingColor: PieceColor,
+) =>
+  getPiecesPositions(state, playingColor).flatMap((position) =>
+    getValidPieceMoves(state, position, playingColor).map(
+      (move) => `${position}_${move}`,
+    ),
+  );
+
 const getAllAvailableMoves = (
   state: GameState,
   playingColor: PieceColor,
-  showAttackOnlyMoves: boolean,
+  showAttackOnlyMoves?: boolean,
 ): BaseMove[] =>
   getPiecesPositions(state, playingColor).flatMap((position) =>
     // to fix recursive call, we pass empty array as positionsUnderAttack which should be fine,

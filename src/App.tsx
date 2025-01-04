@@ -1,11 +1,20 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  Dispatch,
+  SetStateAction,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import {
   columnsString,
   GameState,
+  getAllPossibleMoves,
   getPlayingColor,
   getPositionsUnderAttack,
   getValidPieceMoves,
   initialGameState,
+  Move,
   parsePiece,
   PieceColor,
   PieceType,
@@ -16,13 +25,47 @@ import {
 import { twMerge } from "tailwind-merge";
 import boardImage from "./assets/chess_board.png";
 import pieceImage from "./assets/chess_pieces.png";
+import { getChessMove } from "./llm-api.ts";
+import { stringifyState } from "./console.ts";
 
 const chessGrid: null[][] = Array(10).fill(Array(10).fill(null));
+const playerColor: PieceColor = "w";
 
 function App() {
   const [gameState, setGameState] = useState<GameState>(initialGameState);
   const [selectedPiece, setSelectedPiece] = useState<Position>();
   const playingColor = getPlayingColor(gameState);
+
+  const updateState = useCallback((move: Move) => {
+    setGameState((state) => {
+      try {
+        state = progressGame(state, move);
+      } catch (e) {
+        console.error(e);
+        if (typeof e === "object" && e && "message" in e) alert(e.message);
+      }
+      return state;
+    });
+  }, []);
+
+  useEffect(() => {
+    const isUserTurn = playingColor === playerColor;
+    if (isUserTurn) return;
+    const performAiMove = async () => {
+      const possibleMoves = getAllPossibleMoves(gameState, playingColor);
+      if (possibleMoves.length === 0) return console.log("Game over");
+      const aiMove = await getChessMove({
+        prompt: `
+      Board state:\n${stringifyState(gameState)}
+      Possible moves (${playingColor}):\n${possibleMoves}\n
+      Enter your move:`,
+        possibleMoves: possibleMoves as [string, ...string[]],
+      });
+      const [from, to] = aiMove.split("_");
+      updateState({ position: from as Position, moveTo: to as Position });
+    };
+    performAiMove();
+  }, [gameState, playingColor, updateState]);
   const positionsUnderAttack = getPositionsUnderAttack(gameState, playingColor);
   const possibleMoves =
     selectedPiece && getValidPieceMoves(gameState, selectedPiece, playingColor);
@@ -61,84 +104,44 @@ function App() {
               return (
                 <div key={row} className="flex flex-row flex-1">
                   {array.map((_, column) => {
-                    const header =
-                      (column === 0 || column === 9) && row !== 0 && row !== 9
-                        ? 9 - row
-                        : (row === 0 || row === 9) &&
-                            column !== 0 &&
-                            column !== 9
-                          ? columnsString[column - 1]
-                          : undefined;
                     const position = stringifyPosition({
                       row: 9 - row - 1,
                       column: column - 1,
                     });
                     const piece = gameState.pieces[position];
-                    const { color } = (piece && parsePiece(piece)) ?? {};
                     const isPossibleMove =
-                      selectedPiece && possibleMoves?.includes(position);
-                    const canBeSelected = piece && color === playingColor;
+                      !!selectedPiece && !!possibleMoves?.includes(position);
+
+                    const { color } = (piece && parsePiece(piece)) ?? {};
+                    const canBeSelected = !!piece && color === playerColor;
+                    const isUnderAttack =
+                      positionsUnderAttack.includes(position);
+                    const isSelected = selectedPiece === position;
+                    const onClick = () => {
+                      if (isPossibleMove) {
+                        setSelectedPiece(undefined);
+                        updateState({
+                          position: selectedPiece,
+                          moveTo: position,
+                        });
+                      } else {
+                        if (!canBeSelected) return;
+                        setSelectedPiece(position);
+                      }
+                    };
                     return (
-                      <div
-                        style={{ borderColor: "rgba(255, 255, 255, 0.2)" }}
-                        className={twMerge(
-                          "border",
-                          "aspect-square flex-1 flex items-center justify-center relative",
-                        )}
+                      <CellView
                         key={column}
-                        onClick={() => {
-                          if (isPossibleMove) {
-                            setSelectedPiece(undefined);
-                            setGameState((state) => {
-                              try {
-                                state = progressGame(state, {
-                                  position: selectedPiece,
-                                  moveTo: position,
-                                });
-                              } catch (e) {
-                                console.error(e);
-                                if (
-                                  typeof e === "object" &&
-                                  e &&
-                                  "message" in e
-                                )
-                                  alert(e.message);
-                              }
-                              return state;
-                            });
-                          } else {
-                            if (!canBeSelected) return;
-                            setSelectedPiece(position);
-                          }
-                        }}
-                      >
-                        {header && (
-                          <span className="font-bold text-3xl absolute text-white">
-                            {header}
-                          </span>
-                        )}
-                        <PointCatcher
-                          setPoint={(point) =>
-                            setPoints((points) => {
-                              points = { ...points };
-                              points[position] = point;
-                              return points;
-                            })
-                          }
-                        />
-                        {selectedPiece === position && (
-                          <div className="absolute inset-0 opacity-50 bg-red-500" />
-                        )}
-                        {positionsUnderAttack.includes(position) && (
-                          <div className="absolute inset-0 opacity-50 bg-purple-700" />
-                        )}
-                        {isPossibleMove && (
-                          <div className="absolute inset-0 opacity-50 bg-blue-700 cursor-pointer" />
-                        )}
-                        {canBeSelected && (
-                          <div className="absolute inset-0 opacity-50 bg-yellow-500 cursor-pointer" />
-                        )}
-                      </div>
+                        setPoints={setPoints}
+                        onClick={onClick}
+                        isSelected={isSelected}
+                        isUnderAttack={isUnderAttack}
+                        canBeSelected={canBeSelected}
+                        row={row}
+                        column={column}
+                        position={position}
+                        isPossibleMove={isPossibleMove}
+                      />
                     );
                   })}
                 </div>
@@ -166,6 +169,72 @@ function App() {
     </>
   );
 }
+
+interface CellViewProps {
+  setPoints: Dispatch<
+    SetStateAction<Partial<Record<Position, { x: number; y: number }>>>
+  >;
+  column: number;
+  row: number;
+  position: Position;
+  isPossibleMove: boolean;
+  isUnderAttack: boolean;
+  onClick: () => void;
+  canBeSelected: boolean;
+  isSelected: boolean;
+}
+
+const CellView = ({
+  setPoints,
+  column,
+  row,
+  position,
+  isPossibleMove,
+  onClick,
+  canBeSelected,
+  isUnderAttack,
+  isSelected,
+}: CellViewProps) => {
+  const header =
+    (column === 0 || column === 9) && row !== 0 && row !== 9
+      ? 9 - row
+      : (row === 0 || row === 9) && column !== 0 && column !== 9
+        ? columnsString[column - 1]
+        : undefined;
+  return (
+    <div
+      style={{ borderColor: "rgba(255, 255, 255, 0.2)" }}
+      className={twMerge(
+        "border",
+        "aspect-square flex-1 flex items-center justify-center relative",
+      )}
+      onClick={onClick}
+    >
+      {header && (
+        <span className="font-bold text-3xl absolute text-white">{header}</span>
+      )}
+      <PointCatcher
+        setPoint={(point) =>
+          setPoints((points) => {
+            points = { ...points };
+            points[position] = point;
+            return points;
+          })
+        }
+      />
+      {isSelected && <div className="absolute inset-0 opacity-50 bg-red-500" />}
+      {isUnderAttack && (
+        <div className="absolute inset-0 opacity-50 bg-purple-700" />
+      )}
+      {isPossibleMove && (
+        <div className="absolute inset-0 opacity-50 bg-blue-700 cursor-pointer" />
+      )}
+      {canBeSelected && (
+        <div className="absolute inset-0 opacity-50 bg-yellow-500 cursor-pointer" />
+      )}
+    </div>
+  );
+};
 
 const PointCatcher = ({
   setPoint,
