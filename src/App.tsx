@@ -12,7 +12,7 @@ import {
   getAllPossibleMoves,
   getPlayingColor,
   getPositionsUnderAttack,
-  getValidPieceMoves,
+  getValidPieceMoveStrings,
   initialGameState,
   Move,
   parsePiece,
@@ -21,12 +21,12 @@ import {
   Position,
   progressGame,
   stringifyPosition,
+  stringifyState,
 } from "./chess.ts";
 import { twMerge } from "tailwind-merge";
 import boardImage from "./assets/chess_board.png";
 import pieceImage from "./assets/chess_pieces.png";
 import { getChessMove } from "./llm-api.ts";
-import { stringifyState } from "./console.ts";
 
 const chessGrid: null[][] = Array(10).fill(Array(10).fill(null));
 const playerColor: PieceColor = "w";
@@ -68,7 +68,8 @@ function App() {
   }, [gameState, playingColor, updateState]);
   const positionsUnderAttack = getPositionsUnderAttack(gameState, playingColor);
   const possibleMoves =
-    selectedPiece && getValidPieceMoves(gameState, selectedPiece, playingColor);
+    selectedPiece &&
+    getValidPieceMoveStrings(gameState, selectedPiece, playingColor);
 
   const onEscPress = useCallback(() => {
     setSelectedPiece(undefined);
